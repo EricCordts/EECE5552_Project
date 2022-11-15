@@ -1,21 +1,21 @@
-// Capstone Arduino Program 
-
+// EECE5552 Beacon Firmware Program 
 #include <ArduinoBLE.h>
 
 //need mbed.h for clock functions
 #include <mbed.h>
 
-
 //define UUID
-#define BLE_UUID_BEACON_SERVICE                   "2a675dfb-a1b0-4c11-9ad1-031a84594196" //"1e0f9d07-42fe-4b48-b405-38374e5f2d97"
-//#define BLE_UUID_SENSOR_DATA                      "d80de551-8403-4bae-9f78-4d2af89ff17b"
+#define BLE_UUID_BEACON_SERVICE_DEVICE1           "2a675dfb-a1b0-4c11-9ad1-031a84594196"
+#define BLE_UUID_BEACON_SERVICE_DEVICE2           "ae7a527a-64f7-11ed-9022-0242ac120002"
+#define BLE_UUID_BEACON_SERVICE_DEVICE3           "b52a20c8-64f7-11ed-9022-0242ac120002"
+#define BLE_UUID_BEACON_SERVICE_DEVICE4           "ba5948e4-64f7-11ed-9022-0242ac120002"
+
 #define BLE_DEVICE_NAME                           "Arduino Nano 33 BLE"
 #define BLE_LOCAL_NAME                            "Arduino 1 (Nano 33 BLE)"
 #define BLE_LED_PIN                               LED_BUILTIN
 
 //Measurement Characteristics
-BLEService Beacon_Service(BLE_UUID_BEACON_SERVICE);
-//BLECharacteristic Dummy_data(BLE_UUID_SENSOR_DATA , BLERead, sizeof accel_gyro_data.bytes);
+BLEService Beacon_Service(BLE_UUID_BEACON_SERVICE_DEVICE1);
 
 //function declarations:
 bool setupBleMode();
@@ -95,24 +95,5 @@ void bleDisconnectHandler(BLEDevice central)
 
 void bleTask()
 {
-/*#define BLE_UPDATE_INTERVAL 10
-  read_Accel_Gyro();
-  
-  static uint32_t previousMillis = 0;
-  uint32_t currentMillis = millis();
-  //Milliseconds Value
-  //millisecondsCharacteristic.writeValue(currentMillis%1000);
-
-  if (currentMillis - previousMillis >= BLE_UPDATE_INTERVAL)
-  {
-    previousMillis = currentMillis;
-    BLE.poll();
-  }
-  
-  if (timeUpdated)
-  {
-    timeUpdated = false;
-    dateTimeCharacteristic.writeValue(dateTimeData.bytes, sizeof dateTimeData.bytes);
-  }*/
 }
 

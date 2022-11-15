@@ -5,7 +5,7 @@
 //need mbed.h for clock functions
 #include <mbed.h>
 
-#define BLE_UUID_BEACON_SERVICE                   "2a675dfb-a1b0-4c11-9ad1-031a84594196" //"1e0f9d07-42fe-4b48-b405-38374e5f2d97"
+#define BLE_UUID_BEACON_SERVICE_DEVICE1           "2a675dfb-a1b0-4c11-9ad1-031a84594196" 
 #define BLE_DEVICE_NAME                           "Arduino Nano 33 BLE (Central)"
 #define BLE_LOCAL_NAME                            "Arduino 1 (Nano 33 BLE) (Central)"
 #define BLE_LED_PIN                               LED_BUILTIN
@@ -41,7 +41,6 @@ void setup() {
 }
 
 void loop() {
-  //delay(100);
   bleTask();
 }
 
@@ -89,7 +88,7 @@ void bleTask()
 	  
 	//Serial.println("- Discovering peripheral device...");
 
-  BLE.scanForUuid(BLE_UUID_BEACON_SERVICE);
+  BLE.scanForUuid(BLE_UUID_BEACON_SERVICE_DEVICE1);
 	peripheral = BLE.available();
 	  
 	if (peripheral) {
