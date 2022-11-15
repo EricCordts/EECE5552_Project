@@ -5,10 +5,21 @@
 //need mbed.h for clock functions
 #include <mbed.h>
 
-#define BLE_UUID_BEACON_SERVICE_DEVICE1           "2a675dfb-a1b0-4c11-9ad1-031a84594196" 
+#define BLE_UUID_BEACON_SERVICE_DEVICE1           "2a675dfb-a1b0-4c11-9ad1-031a84594196"
+#define BLE_UUID_BEACON_SERVICE_DEVICE2           "ae7a527a-64f7-11ed-9022-0242ac120002"
+#define BLE_UUID_BEACON_SERVICE_DEVICE3           "b52a20c8-64f7-11ed-9022-0242ac120002"
+#define BLE_UUID_BEACON_SERVICE_DEVICE4           "ba5948e4-64f7-11ed-9022-0242ac120002"
+ 
 #define BLE_DEVICE_NAME                           "Arduino Nano 33 BLE (Central)"
 #define BLE_LOCAL_NAME                            "Arduino 1 (Nano 33 BLE) (Central)"
 #define BLE_LED_PIN                               LED_BUILTIN
+
+int threshold_count = 10; 
+int threshold_factor = 2/3;
+int threshold_1;
+int threshold_2;
+int threshold_3;
+int threshold_4;
 
 //function declarations:
 bool setupBleMode();
@@ -38,9 +49,16 @@ void setup() {
   {
     Serial.println(F("BLE initialized. Waiting for client connection"));
   }
+  threshold_1 = threshold_calc(BLE_UUID_BEACON_SERVICE_DEVICE1, threshold_count);
+  Serial.println(F("Threshold 1: "));
+  Serial.println(threshold_1);
+  threshold_2 = threshold_calc(BLE_UUID_BEACON_SERVICE_DEVICE2, threshold_count);
+  Serial.println(F("Threshold 2: "));
+  Serial.println(threshold_2);
 }
 
 void loop() {
+  
   bleTask();
 }
 
@@ -82,8 +100,26 @@ void bleDisconnectHandler(BLEDevice central)
   Serial.println(central.address());
 }
 
+int threshold_calc(String UUID, int count){
+  Serial.print(UUID);
+  BLEDevice peripheral;
+  int i = 0; 
+  int sum = 0;
+  while (i < count){
+  BLE.scanForUuid(UUID);
+  peripheral = BLE.available();
+    if (peripheral){
+      sum += peripheral.rssi();
+      BLE.stopScan();
+    }
+    i += 1;
+  }
+  return (threshold_factor * sum)/count;
+}
+
 void bleTask()
 {
+  Serial.print(F("Entered BLE TASK"));
   BLEDevice peripheral;
 	  
 	//Serial.println("- Discovering peripheral device...");
@@ -104,5 +140,5 @@ void bleTask()
 	  //Serial.println(" "); 
 	  BLE.stopScan();
 	}
+ 
 }
-

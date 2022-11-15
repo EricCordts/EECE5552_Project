@@ -96,4 +96,3 @@ void bleDisconnectHandler(BLEDevice central)
 void bleTask()
 {
 }
-
