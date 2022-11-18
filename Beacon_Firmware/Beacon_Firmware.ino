@@ -1,14 +1,11 @@
 // EECE5552 Beacon Firmware Program 
 #include <ArduinoBLE.h>
 
-//need mbed.h for clock functions
-#include <mbed.h>
-
 //define UUID
 #define BLE_UUID_BEACON_SERVICE_DEVICE1           "2a675dfb-a1b0-4c11-9ad1-031a84594196"
 #define BLE_UUID_BEACON_SERVICE_DEVICE2           "ae7a527a-64f7-11ed-9022-0242ac120002"
-#define BLE_UUID_BEACON_SERVICE_DEVICE3           "b52a20c8-64f7-11ed-9022-0242ac120002"
-#define BLE_UUID_BEACON_SERVICE_DEVICE4           "ba5948e4-64f7-11ed-9022-0242ac120002"
+//#define BLE_UUID_BEACON_SERVICE_DEVICE3           "b52a20c8-64f7-11ed-9022-0242ac120002"
+//#define BLE_UUID_BEACON_SERVICE_DEVICE4           "ba5948e4-64f7-11ed-9022-0242ac120002"
 
 #define BLE_DEVICE_NAME                           "Arduino Nano 33 BLE"
 #define BLE_LOCAL_NAME                            "Arduino 1 (Nano 33 BLE)"
@@ -20,13 +17,8 @@ BLEService Beacon_Service(BLE_UUID_BEACON_SERVICE_DEVICE1);
 //function declarations:
 bool setupBleMode();
 void bleTask();
-void DateTimeWrittenHandler(BLEDevice central, BLECharacteristic bleCharacteristic);
 void bleConnectHandler(BLEDevice central);
 void bleDisconnectHandler(BLEDevice central);
-void timeTask();
-void initializeClock(void);
-
-bool timeUpdated = false;
 
 void setup() {
   Serial.begin(9600); 

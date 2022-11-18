@@ -1,36 +1,38 @@
-// Capstone Arduino Program 
+// Anklet Arduino Program 
 
 #include <ArduinoBLE.h>
 
-//need mbed.h for clock functions
-#include <mbed.h>
-
 #define BLE_UUID_BEACON_SERVICE_DEVICE1           "2a675dfb-a1b0-4c11-9ad1-031a84594196"
 #define BLE_UUID_BEACON_SERVICE_DEVICE2           "ae7a527a-64f7-11ed-9022-0242ac120002"
-#define BLE_UUID_BEACON_SERVICE_DEVICE3           "b52a20c8-64f7-11ed-9022-0242ac120002"
-#define BLE_UUID_BEACON_SERVICE_DEVICE4           "ba5948e4-64f7-11ed-9022-0242ac120002"
+//#define BLE_UUID_BEACON_SERVICE_DEVICE3           "b52a20c8-64f7-11ed-9022-0242ac120002"
+//#define BLE_UUID_BEACON_SERVICE_DEVICE4           "ba5948e4-64f7-11ed-9022-0242ac120002"
  
 #define BLE_DEVICE_NAME                           "Arduino Nano 33 BLE (Central)"
 #define BLE_LOCAL_NAME                            "Arduino 1 (Nano 33 BLE) (Central)"
 #define BLE_LED_PIN                               LED_BUILTIN
 
-int threshold_count = 10; 
-int threshold_factor = 2/3;
+const int threshold_count = 100; 
+const int comparison_count = 5;
+const float threshold_factor = 0.6;
+int nominalRssiValue1;
 int threshold_1;
 int threshold_2;
-int threshold_3;
-int threshold_4;
+//int threshold_3;
+//int threshold_4;
+
+bool stepDetected;
+
+// Anklet Beacons
+BLEDevice anklet1;
 
 //function declarations:
 bool setupBleMode();
 void bleTask();
-void DateTimeWrittenHandler(BLEDevice central, BLECharacteristic bleCharacteristic);
 void bleConnectHandler(BLEDevice central);
 void bleDisconnectHandler(BLEDevice central);
-void timeTask();
-void initializeClock(void);
-
-bool timeUpdated = false;
+void connectToDevice1();
+void checkDevice1Rssi();
+int averageRssiForComparison(int count);
 
 void setup() {
   Serial.begin(9600); 
@@ -49,17 +51,21 @@ void setup() {
   {
     Serial.println(F("BLE initialized. Waiting for client connection"));
   }
+
+  // Connect to Peripheral 1
+  connectToDevice1();
   threshold_1 = threshold_calc(BLE_UUID_BEACON_SERVICE_DEVICE1, threshold_count);
   Serial.println(F("Threshold 1: "));
   Serial.println(threshold_1);
-  threshold_2 = threshold_calc(BLE_UUID_BEACON_SERVICE_DEVICE2, threshold_count);
-  Serial.println(F("Threshold 2: "));
-  Serial.println(threshold_2);
+  //threshold_2 = threshold_calc(BLE_UUID_BEACON_SERVICE_DEVICE2, threshold_count);
+  //Serial.println(F("Threshold 2: "));
+  //Serial.println(threshold_2);
+
+  stepDetected = false;
 }
 
 void loop() {
-  
-  bleTask();
+  checkDevice1Rssi();
 }
 
 bool setupBleCentral()
@@ -73,15 +79,9 @@ bool setupBleCentral()
   //set device and local name 
   BLE.setDeviceName(BLE_DEVICE_NAME);
   BLE.setLocalName(BLE_LOCAL_NAME);
-
-  Serial.println(F("Set service"));
-  //set serivce 
   
   BLE.setEventHandler(BLEConnected, bleConnectHandler);
   BLE.setEventHandler(BLEDisconnected, bleDisconnectHandler);
-
-  //start advertising
-  Serial.println(F("Advertising"));
   BLE.advertise();
   return true;
 }
@@ -100,45 +100,60 @@ void bleDisconnectHandler(BLEDevice central)
   Serial.println(central.address());
 }
 
-int threshold_calc(String UUID, int count){
-  Serial.print(UUID);
-  BLEDevice peripheral;
-  int i = 0; 
+int threshold_calc(String UUID, int count)
+{
+  nominalRssiValue1 = averageRssiForComparison(threshold_count);
+  return threshold_factor * (nominalRssiValue1);
+}
+
+void connectToDevice1()
+{	  
+	Serial.println("- Discovering anklet 1");
+  while(!anklet1.connected())
+  {
+    BLE.scanForUuid(BLE_UUID_BEACON_SERVICE_DEVICE1);
+    anklet1 = BLE.available();
+    if(anklet1)
+    {
+      Serial.println(anklet1.localName());
+      Serial.println(anklet1.advertisedServiceUuid());
+      anklet1.connect();
+      BLE.stopScan();        
+    }
+  }
+}
+
+void checkDevice1Rssi()
+{
+  int rssiReading = averageRssiForComparison(comparison_count);
+  if(rssiReading > threshold_1 && !stepDetected)
+  {
+    Serial.println("Step detected!");
+    stepDetected = true;
+  }
+  else if(rssiReading < (nominalRssiValue1 + 5))
+  {
+    Serial.println(rssiReading);
+    stepDetected = false;
+  }
+}
+
+int averageRssiForComparison(int count)
+{
+  int i = 0;
   int sum = 0;
   while (i < count){
-  BLE.scanForUuid(UUID);
-  peripheral = BLE.available();
-    if (peripheral){
-      sum += peripheral.rssi();
-      BLE.stopScan();
+    if (anklet1.connected())
+    {
+      int rssiVal = anklet1.rssi();
+      if(rssiVal != 127 && rssiVal != 0)
+      {
+        sum += anklet1.rssi();
+        i += 1;
+      }
     }
-    i += 1;
   }
-  return (threshold_factor * sum)/count;
+  return sum/count;
 }
 
-void bleTask()
-{
-  Serial.print(F("Entered BLE TASK"));
-  BLEDevice peripheral;
-	  
-	//Serial.println("- Discovering peripheral device...");
 
-  BLE.scanForUuid(BLE_UUID_BEACON_SERVICE_DEVICE1);
-	peripheral = BLE.available();
-	  
-	if (peripheral) {
-	  //Serial.println("* Peripheral device found!");
-	  //Serial.print("* Device MAC address: ");
-	  //Serial.println(peripheral.address());
-	  //Serial.print("* Device name: ");
-	  //Serial.println(peripheral.localName());
-	  //Serial.print("* Advertised service UUID: ");
-	  //Serial.println(peripheral.advertisedServiceUuid());
-	  //Serial.println(" ");
-    Serial.println(peripheral.rssi());
-	  //Serial.println(" "); 
-	  BLE.stopScan();
-	}
- 
-}
