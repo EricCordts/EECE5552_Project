@@ -4,6 +4,7 @@
 
 #define BLE_UUID_BEACON_SERVICE_DEVICE1           "2a675dfb-a1b0-4c11-9ad1-031a84594196"
 #define BLE_UUID_BEACON_SERVICE_DEVICE2           "ae7a527a-64f7-11ed-9022-0242ac120002"
+#define BLE_UUID_BEACON_SERVICE_DEVICE3           "b52a20c8-64f7-11ed-9022-0242ac120002"
  
 #define BLE_DEVICE_NAME                           "Arduino Nano 33 BLE (Central)"
 #define BLE_LOCAL_NAME                            "Arduino 1 (Nano 33 BLE) (Central)"
@@ -11,20 +12,17 @@
 
 const int threshold_count = 100; 
 const int comparison_count = 5;
-const float threshold_factor = 0.65;
+const float threshold_factor = 0.75;
+const float nominal_factor = 0.88;
 
 int nominalDeviceRssi1;
 int nominalDeviceRssi2;
 
-int threshold_1;
-int threshold_2;
+int threshold1;
+int threshold2;
 
-bool stepDetectedDevice1;
-bool stepDetectedDevice2;
-
-// Beacons
-BLEDevice beacon1;
-BLEDevice beacon2;
+bool stepDetected;
+int deviceStepDetected;
 
 // main controller
 BLEDevice mainController;
@@ -58,21 +56,83 @@ void setup() {
   threshold_2 = threshold_calc(threshold_count, beacon2, nominalDeviceRssi2);
   Serial.println(F("Threshold 2: "));
   Serial.println(threshold_2);
-  */
+  
 
   // Connect to Peripheral 1 and calculate the threshold
   connectToDevice(BLE_UUID_BEACON_SERVICE_DEVICE1, beacon1);
   threshold_1 = threshold_calc(threshold_count, beacon1, nominalDeviceRssi1);
   Serial.println(F("Threshold 1: "));
   Serial.println(threshold_1);
+  */
 
-  stepDetectedDevice1 = false;
-  stepDetectedDevice2 = false;
+  nominalDeviceRssi1 = getDeviceRssi(10, BLE_UUID_BEACON_SERVICE_DEVICE1);
+  threshold1 = nominalDeviceRssi1 * threshold_factor;
+  Serial.print("Device 1 threshold:");
+  Serial.println(threshold1);
+  nominalDeviceRssi2 = getDeviceRssi(10, BLE_UUID_BEACON_SERVICE_DEVICE2);
+  threshold2 = nominalDeviceRssi2 * threshold_factor;
+  Serial.print("Device 2 threshold:");
+  Serial.println(threshold2);
+  stepDetected = false;
+  deviceStepDetected = 0;
 }
 
 void loop() {
-  checkBeacon1Rssi(beacon1);
-  //checkBeacon2Rssi(beacon2);  
+  int device1Reading = -1000;
+  int device2Reading = -1000;
+  if((!stepDetected) || (stepDetected && deviceStepDetected == 1))
+  {
+    device1Reading = getDeviceRssi(1, BLE_UUID_BEACON_SERVICE_DEVICE1);
+    Serial.print("Device 1 reading:");
+    Serial.println(device1Reading);
+  }
+  if((!stepDetected) || (stepDetected && deviceStepDetected == 2))
+  {  
+    device2Reading = getDeviceRssi(1, BLE_UUID_BEACON_SERVICE_DEVICE2);
+    Serial.print("Device 2 reading:");
+    Serial.println(device2Reading);
+  }
+  
+  if((device1Reading > threshold1) && !stepDetected)
+  {
+    stepDetected = true;
+    deviceStepDetected = 1;    
+    Serial.println("Step detected Device 1");
+  }
+  else if((device2Reading > threshold2) && !stepDetected)
+  {
+    stepDetected = true;
+    deviceStepDetected = 2;
+    Serial.println("Step detected Device 2");
+  }
+
+  // if a step has been detected, 
+  // check that the original device has gone back to 
+  // its nominal RSSI value.
+  if(stepDetected)
+  {
+    if(deviceStepDetected == 1)
+    {
+      if(device1Reading < (nominalDeviceRssi1 * nominal_factor))
+      {
+        // reset stepDetected and deviceStepDetected to default values
+        stepDetected = false;
+        deviceStepDetected = 0;
+        Serial.println("Step cleared");
+      }
+    }
+    else if(deviceStepDetected = 2)
+    {
+      if(device2Reading < (nominalDeviceRssi2 * nominal_factor))
+      {
+        // reset stepDetected and deviceStepDetected to default values
+        stepDetected = false;
+        deviceStepDetected = 0;
+        Serial.println("Step cleared");
+      }
+    }
+  }
+  
 }
 
 bool setupBleCentral()
@@ -131,6 +191,7 @@ void connectToDevice(String uuid, BLEDevice& device)
   }
 }
 
+/*
 void checkBeacon1Rssi(BLEDevice& device)
 {
   int rssiReading = averageRssiForComparison(comparison_count, device);
@@ -147,7 +208,7 @@ void checkBeacon1Rssi(BLEDevice& device)
     stepDetectedDevice1 = false;
   }
 }
-
+*/
 /*
 void checkBeacon2Rssi(BLEDevice& device)
 {
@@ -183,4 +244,33 @@ int averageRssiForComparison(int count, BLEDevice& device)
     }
   }
   return sum/count;
+}
+
+int getDeviceRssi(int checkCount, String uuid)
+{
+  int i = 0;
+  int sum = 0;
+  BLEDevice device;
+  while(!device)
+  {
+    BLE.scanForUuid(uuid);
+    device = BLE.available();
+    if(device)
+    {
+      //Serial.println(device.localName());
+      //Serial.println(device.advertisedServiceUuid());
+      BLE.stopScan();
+
+      while (i < checkCount)
+      {
+        int rssiVal = device.rssi();
+        if(rssiVal != 127 && rssiVal != 0)
+        {
+          sum += device.rssi();
+          i += 1;
+        }
+      }
+    }
+  }
+  return sum/checkCount;
 }
